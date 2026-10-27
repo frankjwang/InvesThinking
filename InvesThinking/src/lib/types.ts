@@ -16,6 +16,7 @@ export interface StockArticle {
   researchDate: string;
   summaryTable: SummaryRow[];
   priceTiers: PriceTier[];
+  entryZone?: string;
   judgment: string;
   content: string; // The HTML content
 }

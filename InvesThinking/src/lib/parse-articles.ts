@@ -69,12 +69,18 @@ export async function getAllArticles(): Promise<StockArticle[]> {
         }
 
         // Find Price Tier Table
-        if (line.includes('我的价格梯度')) {
-          // Look ahead for the table
-          for (let j = i + 1; j < lines.length && j < i + 10; j++) {
-            if (lines[j].includes('|') && (lines[j].includes('价格区间') || lines[j].includes('股价区间'))) {
+        if (line.includes('价格梯度')) {
+          // Look ahead for the table header
+          for (let j = i + 1; j < lines.length && j < i + 8; j++) {
+            const nextLine = lines[j].trim();
+            if (nextLine.startsWith('|') && !nextLine.includes('---')) {
               inPriceTierTable = true;
-              i = j + 1; // skip separator
+              // Check if the following line is the markdown separator (|---|---|)
+              if (lines[j + 1]?.trim().startsWith('|') && lines[j + 1].includes('---')) {
+                i = j + 1; // skip header and separator
+              } else {
+                i = j;
+              }
               break;
             }
           }
@@ -85,20 +91,24 @@ export async function getAllArticles(): Promise<StockArticle[]> {
           if (line.startsWith('|')) {
             const parts = line.split('|').map(p => p.trim()).filter(Boolean);
             if (parts.length >= 2 && !parts[0].includes('---')) {
-              priceTiers.push({ priceRange: parts[0].replace(/\*\*/g, ''), judgment: parts[1].replace(/\*\*/g, '') });
+              priceTiers.push({ 
+                priceRange: parts[0].replace(/\*\*/g, '').trim(), 
+                judgment: parts[1].replace(/\*\*/g, '').trim() 
+              });
             }
           } else if (line !== '') {
             inPriceTierTable = false;
           }
         }
         
-        // Final judgment usually towards the end, after price tiers or under "最终结论"
-        if ((line.includes('最终结论') || line.includes('最终判断')) && line.startsWith('#')) {
-          // get the next non-empty lines
+        // Final judgment usually towards the end, under "## 最终判断" or "## 最终结论"
+        if (line.match(/^##+\s*(最终判断|最终结论)/)) {
           for (let j = i + 1; j < lines.length; j++) {
-            if (lines[j].trim() !== '') {
-              judgment += lines[j].trim() + ' ';
-              if (judgment.length > 100) break;
+            const text = lines[j].trim();
+            if (text.startsWith('#')) break; // Next section starts
+            if (text && !text.startsWith('|') && !text.startsWith('---')) {
+              judgment += text.replace(/\*\*/g, '') + ' ';
+              if (judgment.length > 150) break;
             }
           }
         }
@@ -110,6 +120,26 @@ export async function getAllArticles(): Promise<StockArticle[]> {
         const row = summaryTable.find(r => r.key.includes('是否') || r.key.includes('买入'));
         if (row) judgment = row.value;
         else judgment = summaryTable[summaryTable.length - 1].value;
+      }
+
+      // Extract recommended entry zone
+      let entryZone = '';
+      const entryRow = summaryTable.find(r => r.key.includes('建仓') || r.key.includes('更有吸引力'));
+      if (entryRow) {
+        const match = entryRow.value.match(/(\d+(?:\.\d+)?[\s–\-~到至]+\d+(?:\.\d+)?美元(?:附近)?|\d+美元附近)/);
+        if (match) {
+          entryZone = match[1];
+        } else {
+          entryZone = entryRow.value.split('，')[0].replace(/\*\*/g, '').trim();
+        }
+      }
+      if (!entryZone && priceTiers.length >= 2) {
+        const tierWithEntry = priceTiers.find(t => t.judgment.includes('第一笔') || t.judgment.includes('建仓'));
+        if (tierWithEntry) {
+          entryZone = tierWithEntry.priceRange;
+        } else {
+          entryZone = priceTiers[priceTiers.length - 2].priceRange;
+        }
       }
 
       // Use remark to convert markdown into HTML string
@@ -126,6 +156,7 @@ export async function getAllArticles(): Promise<StockArticle[]> {
         researchDate,
         summaryTable,
         priceTiers,
+        entryZone: entryZone || 'N/A',
         judgment: judgment.trim(),
         content: contentHtml,
       };

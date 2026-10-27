@@ -15,13 +15,43 @@ function getTierColors(index: number) {
   return colors[index] || colors[colors.length - 1];
 }
 
+// Helper to check if current price falls within a tier range description
+function isPriceInTier(price: number | string, rangeText: string): boolean {
+  if (typeof price !== 'number' || isNaN(price)) return false;
+  const clean = rangeText.replace(/,/g, '');
+  
+  // "90美元以上" or "12美元以上"
+  const aboveMatch = clean.match(/(\d+(?:\.\d+)?)\s*美元以上/);
+  if (aboveMatch) {
+    return price >= parseFloat(aboveMatch[1]);
+  }
+  
+  // "明显低于5美元" or "35美元附近或以下"
+  const belowMatch = clean.match(/(?:明显低于|低于)\s*(\d+(?:\.\d+)?)\s*美元|(\d+(?:\.\d+)?)\s*美元(?:附近)?或以下/);
+  if (belowMatch) {
+    return price < parseFloat(belowMatch[1] || belowMatch[2]);
+  }
+  
+  // "70–90美元" or "6–7美元" or "53–68美元" or "40–45美元附近"
+  const rangeMatch = clean.match(/(\d+(?:\.\d+)?)\s*[–\-~到至]\s*(\d+(?:\.\d+)?)\s*美元/);
+  if (rangeMatch) {
+    const min = parseFloat(rangeMatch[1]);
+    const max = parseFloat(rangeMatch[2]);
+    return price >= min && price <= max;
+  }
+  
+  return false;
+}
+
 export function StockCard({ article, priceData }: { article: StockArticle, priceData?: StockPrice }) {
   const [expanded, setExpanded] = useState(false);
   
-  // Extract entry zone from the second to last tier if available
-  const entryZone = article.priceTiers.length >= 2 
-    ? article.priceTiers[article.priceTiers.length - 2].priceRange 
-    : "N/A";
+  // Extract entry zone from article metadata or price tiers
+  const entryZone = article.entryZone && article.entryZone !== 'N/A'
+    ? article.entryZone
+    : (article.priceTiers.length >= 2 
+        ? article.priceTiers[article.priceTiers.length - 2].priceRange 
+        : "N/A");
 
   const price = priceData ? priceData.price : '--';
   const change = priceData ? priceData.change : 0;
@@ -63,16 +93,21 @@ export function StockCard({ article, priceData }: { article: StockArticle, price
           <h4 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Price Tier</h4>
           <div className="flex flex-col gap-1.5 mb-4">
             {article.priceTiers.map((tier, idx) => {
-              // Basic highlighting logic: if the current price falls into this tier's description (very naive check for mockup)
-              const priceStr = price.toString();
-              const isCurrent = tier.priceRange.includes(priceStr.split('.')[0]) || (idx === 3 && price === '--'); // Fake logic for demo if no price
+              const isCurrent = isPriceInTier(price, tier.priceRange);
               
               return (
                 <div 
                   key={idx} 
-                  className={`flex justify-between items-center p-2 rounded border ${getTierColors(idx)} ${isCurrent ? 'ring-2 ring-blue-400 dark:ring-blue-500 shadow-md transform scale-[1.02] transition-transform' : ''}`}
+                  className={`flex justify-between items-center p-2 rounded border transition-all ${getTierColors(idx)} ${isCurrent ? 'ring-2 ring-blue-500 dark:ring-blue-400 shadow-md font-semibold scale-[1.02]' : 'opacity-85 hover:opacity-100'}`}
                 >
-                  <span className="text-sm font-semibold">{tier.priceRange}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold">{tier.priceRange}</span>
+                    {isCurrent && (
+                      <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded-full font-bold">
+                        当前
+                      </span>
+                    )}
+                  </div>
                   <span className="text-xs opacity-90 truncate ml-4 max-w-[60%] text-right">{tier.judgment}</span>
                 </div>
               );
