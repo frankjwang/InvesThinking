@@ -3,6 +3,7 @@ import path from 'path';
 import matter from 'gray-matter';
 import { remark } from 'remark';
 import html from 'remark-html';
+import remarkGfm from 'remark-gfm';
 import { StockArticle, SummaryRow, PriceTier } from './types';
 
 const articlesDirectory = path.join(process.cwd(), 'articles');
@@ -142,8 +143,9 @@ export async function getAllArticles(): Promise<StockArticle[]> {
         }
       }
 
-      // Use remark to convert markdown into HTML string
+      // Use remark with remark-gfm to convert markdown into HTML string (enables GFM tables)
       const processedContent = await remark()
+        .use(remarkGfm)
         .use(html)
         .process(rawContent);
       const contentHtml = processedContent.toString();
