@@ -169,5 +169,8 @@ export async function getAllArticles(): Promise<StockArticle[]> {
 
 export async function getArticleBySlug(slug: string): Promise<StockArticle | undefined> {
   const articles = await getAllArticles();
-  return articles.find(article => article.slug === slug);
+  const decoded = decodeURIComponent(slug);
+  return articles.find(
+    article => article.slug === slug || article.slug === decoded || encodeURIComponent(article.slug) === slug
+  );
 }

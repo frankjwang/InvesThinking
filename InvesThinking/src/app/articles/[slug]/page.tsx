@@ -10,8 +10,8 @@ export async function generateStaticParams() {
 }
 
 export default async function ArticlePage({ params }: { params: { slug: string } }) {
-  // In Next.js 14, params is an object directly. In some latest versions it might be a Promise, but typically direct is fine for app router.
-  const article = await getArticleBySlug(params.slug);
+  const slug = decodeURIComponent(params.slug);
+  const article = await getArticleBySlug(slug);
   
   if (!article) {
     notFound();
