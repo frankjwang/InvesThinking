@@ -1,20 +1,20 @@
 [
   {
     "ticker": "MXL",
-    "price": 60.82,
-    "change": -7.6305,
-    "updatedAt": "2026-11-04T15:02:56.520239Z"
+    "price": 56.28,
+    "change": -14.5247,
+    "updatedAt": "2026-11-04T20:42:00.079357Z"
   },
   {
     "ticker": "MBLY",
-    "price": 5.66,
-    "change": 0.9678,
-    "updatedAt": "2026-11-04T15:02:56.733640Z"
+    "price": 5.38,
+    "change": -4.2009,
+    "updatedAt": "2026-11-04T20:42:00.293233Z"
   },
   {
     "ticker": "VIRT",
-    "price": 52.67,
-    "change": -1.0614,
-    "updatedAt": "2026-11-04T15:02:56.992526Z"
+    "price": 52.6,
+    "change": -1.1835,
+    "updatedAt": "2026-11-04T20:42:00.508988Z"
   }
 ]
